@@ -1,0 +1,112 @@
+version: "3.7"
+services:
+
+  namenode:
+    image: bde2020/hadoop-namenode:${HADOOP_MASTERNODE_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: namenode
+    volumes:
+      - namenode-data:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=projekat
+    env_file:
+      - ./docker-spark/hadoop.env
+    ports:
+      - ${NAMENODE_PORT_01:-9870}:9870
+      - ${NAMENODE_PORT_02:-9000}:9000
+    restart: unless-stopped
+
+  datanode-01:
+    image: bde2020/hadoop-datanode:${HADOOP_DATANODE_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: datanode-01
+    depends_on:
+      - namenode
+    volumes:
+      - datanode-01-data:/hadoop/dfs/data
+    env_file:
+      - ./docker-spark/hadoop.env
+    restart: unless-stopped
+
+  datanode-02:
+    image: bde2020/hadoop-datanode:${HADOOP_DATANODE_VERSION:-2.0.0-hadoop3.2.1-java8}
+    container_name: datanode-02
+    depends_on:
+      - namenode
+    volumes:
+      - datanode-02-data:/hadoop/dfs/data
+    env_file:
+      - ./docker-spark/hadoop.env
+    restart: unless-stopped
+
+  hue:
+    image: gethue/hue:${HUE_VERSION:-20201111-135001}
+    container_name: hue
+    hostname: hue
+    dns: 8.8.8.8
+    ports:
+      - ${HUE_PORT:-8888}:8888
+    volumes:
+      - ./docker-spark/conf.dist:/usr/share/hue/desktop/conf
+    depends_on:
+      - namenode
+    restart: unless-stopped
+
+  spark-master:
+    image: bde2020/spark-master:${SPARK_MASTER_VERSION:-3.0.1-hadoop3.2}
+    container_name: spark-master
+    ports:
+      - ${SPARK_MASTER_PORT_01:-8080}:8080
+      - ${SPARK_MASTER_PORT_02:-7077}:7077
+    environment:
+      - PYSPARK_PYTHON=python3
+    env_file:
+      - ./docker-spark/hadoop.env
+    restart: unless-stopped
+
+  spark-worker-01:
+    image: bde2020/spark-worker:${SPARK_WORKER_VERSION:-3.0.1-hadoop3.2}
+    container_name: spark-worker-01
+    depends_on:
+      - spark-master
+    ports:
+      - ${SPARK_WORKER_01_PORT:-8081}:8081
+    env_file:
+      - ./docker-spark/hadoop.env
+    restart: unless-stopped
+
+  spark-worker-02:
+    image: bde2020/spark-worker:${SPARK_WORKER_VERSION:-3.0.1-hadoop3.2}
+    container_name: spark-worker-02
+    depends_on:
+      - spark-master
+    ports:
+      - ${SPARK_WORKER_02_PORT:-8082}:8081
+    env_file:
+      - ./docker-spark/hadoop.env
+    restart: unless-stopped
+  
+  spark-worker-03:
+    image: bde2020/spark-worker:${SPARK_WORKER_VERSION:-3.0.1-hadoop3.2}
+    container_name: spark-worker-03
+    depends_on:
+      - spark-master
+    ports:
+      - ${SPARK_WORKER_03_PORT:-8083}:8081
+    env_file:
+      - ./docker-spark/hadoop.env
+    restart: unless-stopped
+
+  rstudio:
+    image: jozefhajnala/sparkfromr:latest
+    container_name: rstudio
+    ports:
+      - ${RSTUDIO_PORT:-8787}:8787
+    environment:
+      - PASSWORD=no one shall pass
+    restart: unless-stopped
+    volumes:
+      - ./rstudio:/home/rstudio/data
+
+volumes:
+  namenode-data:
+  datanode-01-data:
+  datanode-02-data:

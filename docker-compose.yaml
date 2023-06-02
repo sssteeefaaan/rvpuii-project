@@ -1,0 +1,13 @@
+services:
+  rstudio:
+    image: rocker/rstudio:latest
+    ports:
+      - "8787:8787"
+    environment:
+      PASSWORD: no one shall pass
+    volumes:
+      - ./rstudio/workspace:/home/rstudio/workspace
+      # - ./rstudio/.config:/home/rstudio/.config
+      # - ./rstudio/spark:/home/rstudio/spark
+      # - ./rstudio/.local:/home/rstudio/.local
+      # - ./rstudio/.profile:/home/rstudio/.profile
