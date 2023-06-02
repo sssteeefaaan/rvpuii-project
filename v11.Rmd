@@ -1,0 +1,59 @@
+---
+title: Analiza skupa podataka o nečemu
+author: Stefan Aleksić
+output: html_document
+---
+
+#markdown
+#yaml
+#r
+#knittr
+#92 strana
+
+## Nemoj da ubijas job kroz konzolu, nego kroz web -> jobs -> kill
+## Nema faktora u sparku, mora da se konvertuje u string ili nesto tako
+
+
+## Uvod
+
+U ovom izveštaju su predstavljeni rezultati obrade skupa podataka ....
+
+###  Skup podataka **letovi**
+
+Skup podataka letovi je dovijen od ...
+
+```{r environment setup, echo=F, eval=F}
+library(knitr)
+library(sparklyr)
+Sys.setenv(JAVA_HOME="/usr/lib/jvm/java-1.11.0-openjdk-amd64")
+```
+
+```{r spark conntext setup, echo=F, eval=F}
+sc <- spark_connect(master = "local", version="3.3")
+```
+
+```{r loading dataset, echo=F, results="hide", eval=F}
+letovi <- spark_read_csv(sc,
+                         name="flights",
+                         path = "flights/",
+                         memory = T)
+#spark_web(sc)
+```
+
+```{r mutating dataset, echo=F}
+letovi.filtered <- letovi %>%
+  filter(!is.na(DepDelay)) %>%
+  mutate(Delayed = ifelse(DepDelay > 0, 1, 0)) %>%
+  mutate(Date=spark_apply(function(x){sprintf(x, "%d/%d/%d", DayofMonth, Month, Year)})) %>%
+  select(c(Date, Origin, OriginCityName, OriginStateName, Dest, DestCityName, DestStateName, Delayed))
+```
+
+```{r diplaying data, echo=F}
+letovi.list <- head(letovi.filtered)
+letovi.list
+kable(letovi.list, caption = "Dataset 'Flights'", format="markdown")
+```
+
+```{r closing spark context, echo=F, eval=F}
+spark_disconnect(sc)
+```
