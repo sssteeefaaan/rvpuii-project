@@ -1,0 +1,111 @@
+Element name,Element definition,Value definitions,External links
+monitoringSiteIdentifier,Unique international identifier of the monitoring site in which the data were obtained.,,
+monitoringSiteIdentifierScheme,Specification of whether the monitoring site is a WFD monitoring site ('euMonitoringSiteCode') or not ('eionetMonitoringSiteCode').,"eionetMonitoringSiteCode: EIONET identifier;
+euMonitoringSiteCode: WFD identifier ",
+parameterWaterBodyCategory,"Water body category code, as defined in the codelist.","CW: Coastal water body
+GW: Groundwater body
+LW: Lake water body
+MW: Marine waters
+RW: River water body
+TW: Transitional water body
+TeW: Territorial waters",http://dd.eionet.europa.eu/vocabulary/wise/WFDWaterBodyCategory/
+observedPropertyDeterminandCode,"Unique code of the determinand monitored, as defined in the codelist.","CAS_100-00-5:       1-chloro-4-nitrobenzene
+CAS_100-01-6:       4-Nitroaniline
+CAS_100-02-7:       Nitrophenol
+CAS_100-41-4:       Ethylbenzene
+CAS_100-42-5:       Styrene
+CAS_100-44-7:       Benzyl chloride
+CAS_1002-53-5:     Dibutyltin
+CAS_10028-17-8:   Tritium
+CAS_10061-01-5:   cis-1,3-dichloropropene
+CAS_10061-02-6:   trans-1,3-dichloropropene
+CAS_100646-51-3: Quizalofop-P-ethyl
+CAS_1007-28-9:     Desisopropylatrazine
+CAS_101-21-3:       Chlorpropham
+CAS_101-42-8:       Fenuron
+CAS_101-55-3:       4-bromophenyl phenyl ether
+CAS_101205-02-1: Cycloxydim
+CAS_1014-69-3:     Desmetryn
+CAS_1024-57-3:     Heptachlor epoxide
+CAS_10265-92-6:   Methamidophos
+CAS_103-33-3:       Azobenzene",http://dd.eionet.europa.eu/vocabulary/wise/ObservedProperty/
+observedPropertyDeterminandLabel,Name of the determinand.,,
+procedureAnalysedMatrix,Matrix where the measurement has been made.,"B:            Biota - Total
+B-BL:       Biota - Fluids - Blood
+B-EG:      Biota - Eggs
+B-FA:       Biota - Tissues - Fat
+B-GO:      Biota - Organs - Gonads
+B-KI:        Biota - Organs - Kidney
+B-LI:        Biota - Organs - Liver
+B-MU:      Biota - Tissues - Muscle
+B-OT:       Biota - Other
+B-ST:        Biota - Tissues - Soft tissue
+S:             Sediment - Total
+S-0020:    Sediment - Fraction below 20 µm 
+S-0063:    Sediment - Fraction below 63 µm 
+S-0090:    Sediment - Fraction below 90 µm 
+S-0125:    Sediment - Fraction below 125 µm
+S-0150:    Sediment - Fraction below 150 µm
+S-0200:    Sediment - Fraction below 200 µm
+S-0250:    Sediment - Fraction below 250 µm
+S-0500:    Sediment - Fraction below 500 µm
+S-1000:    Sediment - Fraction below 1000 µm",http://dd.eionet.europa.eu/vocabulary/wise/Matrix
+resultUom,Unit of measure for the reported values.,"1000000m3	cubic hectometre					hm3
+1000m3		cubic decametre						dam3
+1000t.a-1	thousand tonnes per year			1000.t/a
+Bq			becquerel							Bq
+Cel			degree Celsius						Cel
+K			degree Kelvin						K
+M{EUR}		Million Euro						M{EUR}
+S.m-1		siemens per metre					S/m
+[CFU]		Colony Forming Unit					[CFU]
+[CFU].L-1	Colony Forming Unit per litre		[CFU]/L
+[CFU].dL-1	Colony Forming Unit per deciliter	[CFU]/dL
+[pH]		pH									[pH]
+[ppm]		parts per million					[ppm]
+[ppth]		parts per thousand					[ppth]
+a			year								a
+d			day									d
+eq			equivalent							eq
+eq.L-1		equivalent per litre				eq/L
+kg			kilogram							kg
+kg.a-1		kilogram per year					kg/a",http://dd.eionet.europa.eu/vocabulary/wise/uom/
+phenomenonTimeReferenceYear,Year during which the data were sampled.,,
+parameterSamplingPeriod,The period of the year during which the data used for the aggregation were sampled.,,
+procedureLOQValue,The smallest concentration that can be distinguished from the analytical blank at a chosen level of statistical confidence (usually 95%).,,
+resultNumberOfSamples,Number of sample values included in the aggregated data.,,
+resultQualityNumberOfSamplesBelowLOQ,Number of sample values below LOQ included in the aggregated data.,,
+resultQualityMinimumBelowLOQ,Flag to indicate whether the minimum sample value used for the aggregation was below the analytical limit of quantification (LOQ).,"0: false;
+1: true",
+resultMinimumValue,Minimum sample value of the data used for aggregation.,,
+resultQualityMeanBelowLOQ,Flag to indicate whether the mean value is below the highest LOQ.,"0: false;
+1: true",
+resultMeanValue,Mean value of the data used for aggregation.,,
+resultQualityMaximumBelowLOQ,Flag to indicate whether the maximum sample value used for the aggregation was below the analytical limit of quantification (LOQ).,"0: false;
+1: true",
+resultMaximumValue,Maximum sample value of the data used for aggregation.,,
+resultQualityMedianBelowLOQ,Flag to indicate whether the median value is below the highest LOQ.,"0: false;
+1: true",
+resultMedianValue,Median value of the data used for aggregation.,,
+resultStandardDeviationValue,Standard deviation value of the data used for aggregation.,,
+procedureAnalyticalMethod,CEN/ISO code of the analytical method.,,
+parameterSampleDepth,Depth at which sample was taken in meter below water surface.,,
+resultObservationStatus,"Status of the observed value in terms of its availability, relevancy, correctness or specifics of its source category.","A: Record is confirmed as correct;
+L: Missing observed value, the data were not collected;
+M: Missing observed value, the data can not exist;
+N: Missing observed value, observed value is not relevant or not significant;
+O: Missing observed value, no further information is available or record reported in the past should be deleted;
+W: Missing observed value, data are included in another source category;
+X: Reported value includes data from another source category (categories);
+Y: The source category does not exactly match the standard definition",
+Remarks,"Remarks, comments or explanatory notes.",,
+metadata_versionId,Unique metadata identifier of version of the feature or record. Url that points either to the source of the reported data or to a page providing information on the data origin.,,
+metadata_beginLifeSpanVersion,Timestamp when the feature or record was created. In case of reported data it's the release date and time of the respective CDR envelope.,,
+metadata_statusCode,Status of the feature or record regarding its registration.,"valid: accepted and valid reported feature or record;
+stable: accepted and valid reported record, confirmed by the reporter as correct;
+experimental: derived feature or record, e.g. legacy record converted to the new structure by EEA or records with updated spatial identifiers ",
+metadata_observationStatus,Status of the record regarding its reliability.,"A: Normal record;
+U: Record with lower reliability;
+V: Unvalidated record",
+metadata_statements,Aditional information or statements regarding the reliability of the feature or record.,,
+UID,Unique identifier of the record in the EEA WISE_SOE database.,,
