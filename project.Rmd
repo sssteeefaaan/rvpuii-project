@@ -19,13 +19,16 @@ curl -X GET  --header 'Content-Type: application/json' --header 'Accept: applica
 unzip data.zip /home/stefan/rvpuii-project/workspace/data
 ```
 
+Ovaj skup podataka sadrži vremenske serije hranljivih materija, organske materije, opasnih materija i drugih hemikalija u rekama, jezerima, podzemnim vodama, prelaznim, priobalnim i morskim vodama. Lista identifikatora prostornih objekata sa izabranim atributima, o kojima se izveštava preko WFD (The Water Framework Directive) and [WISE Spatial data](http://dd.eionet.europa.eu/datasets/latest/WISE_SpatialData), izveštavač o prostornim podacima, dodaje se skupu podataka kao prostorna [referenca](http://dd.eionet.europa.eu/vocabulary/wise/WFDWaterBodyCategory/). Podatke je sastavila i obradila [EEA (European Environment Agency)](https://www.eea.europa.eu/). Za dodatne informacije pogledajte [metapodatke](https://docs.google.com/spreadsheets/d/1Vv_Wofjg170YPPIZKX1BCxpUb17gvs8QH5vTIoRhOdg/edit?usp=sharing).
+
+
 
 # Rad
 
 ### Inicijalizacija
 
-#### Prevlačenje paketa i instaliranje spark-a
-```{r downloading packages, eval=F, include=T}
+#### Prevlačenje neophodnih paketa za analizu podataka
+```{r Downloading necessary packages for data analysis, eval=F, include=T}
 install.packages("sparklyr")
 install.packages("tidyverse")
 install.packages("gridExtra")
@@ -33,7 +36,7 @@ install.packages("gridExtra")
 
 
 #### Uključivanje neophodnih biblioteka
-```{r library setup, eval=F, include=T}
+```{r Loading necessary libraries, eval=F, include=T}
 library(tidyr)
 library(dplyr)
 library(ggplot2)
@@ -44,8 +47,8 @@ library(cowplot)
 ```
 
 
-#### Instaliranje i povezivanje sa spark-om
-```{r spark setup, eval=F, include=T}
+#### Instaliranje i pripremanje spark okruženja
+```{r Installing and setting up spark environment, eval=F, include=T}
 spark_install(version="3.3.2")
 Sys.setenv(JAVA_HOME="/usr/lib/jvm/java-1.11.0-openjdk-amd64")
 knitr::opts_knit$set(root.dir = "/home/stefan/rvpuii-project/workspace")
@@ -53,38 +56,53 @@ sc <- spark_connect(master = "local", version="3.3.2")
 ```
 
 
-#### Učitavanje podataka
-```{r loading dataset, eval=F, include=T}
-vode <- spark_read_csv(sc,
-                         name="water",
-                         path = "/home/stefan/rvpuii-project/workspace/data/",
-                         memory = T)
+#### Učitavanje skupa podataka
+```{r Loading dataset and its definition, eval=F, include=T}
+water.dataset <- spark_read_csv(sc,
+                                name="waterdataset",
+                                path = "/home/stefan/rvpuii-project/workspace/data/Waterbase_v2021_1_T_WISE6_AggregatedData.csv",
+                                memory = T)
 ```
 
 
 #### Prečišćavanje podataka
 ```{r mutating dataset, eval=F, include=T}
-vode.filtered <- vode %>%
+water.dataset.filtered <- water.dataset %>%
   filter(!(is.na(resultQualityMeanBelowLOQ) ||
            is.na(observedPropertyDeterminandCode) ||
            is.na(resultNumberOfSamples) ||
            is.na(parameterWaterBodyCategory) ||
            is.na(resultStandardDeviationValue))) %>%
   mutate(quantified = ifelse(resultQualityMeanBelowLOQ > 0, 0, 1)) %>%
-  select(c(quantified, parameterWaterBodyCategory, observedPropertyDeterminandCode, resultNumberOfSamples, resultStandardDeviationValue))
+  select(quantified,
+         parameterWaterBodyCategory,
+         observedPropertyDeterminandCode,
+         resultNumberOfSamples,
+         resultStandardDeviationValue)
 ```
 
 
-##### Dimenzije pre i posle prečišćavanja
-```{r Dimenzije pre i posle prečišćavanja, inlcude=T, echo=F, eval=T}
-sdf_dim(vode)
-sdf_dim(vode.filtered)
+##### Dimenzije skupa podataka
+```{r Dimenzije pre i posle prečišćavanja, inlcude=F, echo=F, eval=T}
+sprintf("Dimenzije učitanog skupa podataka:   %d x %d", sdf_nrow(water.dataset), sdf_ncol(water.dataset))
+sprintf("Dimenzije prečišćenog skupa podataka: %d x %d", sdf_nrow(water.dataset.filtered), sdf_ncol(water.dataset.filtered))
+```
+
+
+#### Prikaz prvih 10 redova prečišćenih podataka
+```{r Displaying first 10 rows of transformed dataset, echo=F}
+knitr::kable(head(water.dataset.filtered, n=10L),
+             col.names = colnames(water.dataset.filtered),
+             label = "Tabelarni prikaz prečišćenih podataka",
+             format = "markdown",
+             align = "ccccc"
+             )
 ```
 
 
 ### Treniranje modela logističke regresije sa različitim vrednostima broja maksimalnih iteracija
-```{r splitting data to training and testing datasets, eval=F, include=T}
-dataset <- sdf_random_split(vode.filtered, seed=1, training=0.8, test=0.2)
+```{r Splitting dataset into training and testing datasets, eval=F, include=T}
+dataset.for.clustering <- sdf_random_split(water.dataset.filtered, seed=1, training=0.8, test=0.2)
 formula <- quantified ~ parameterWaterBodyCategory + resultNumberOfSamples + resultStandardDeviationValue
 
 samples <- c(1:5)
@@ -96,11 +114,11 @@ log.reg.area.under.roc <- samples
 log.reg.accuracy <- samples
 
 for(i in samples){
-  logreg <- ml_logistic_regression(dataset$training,
+  logreg <- ml_logistic_regression(dataset.for.clustering$training,
                                    formula,
                                    max_iter = max.iterations[i],
                                    family = "binomial")
-    evaluation <- ml_evaluate(logreg, dataset=dataset$test)
+    evaluation <- ml_evaluate(logreg, dataset=dataset.for.clustering$test)
     log.reg.weighted.precision[i] <- evaluation$weighted_precision()
     log.reg.weighted.recall[i] <- evaluation$weighted_recall()
     log.reg.weighted.f.measure[i] <- evaluation$weighted_f_measure()
@@ -111,7 +129,7 @@ for(i in samples){
 
 
 #### Prikaz zavisnosti broja iteracija od tačnosti modela
-```{r graphing, include=T}
+```{r Graphing the dependancy of clustering model accuracy based on the number of maximal iterations, include=T, echo=F}
 df <- data.frame(i=max.iterations,
                  wp=log.reg.weighted.precision,
                  wr=log.reg.weighted.recall,
@@ -157,25 +175,25 @@ df %>%
 ```
 
 ### Tačnost različitih klasifikacionih modela u odnosu na metod testiranja modela
-```{r Kreiranje tri različita klasifikaciona modela, eval=F, include=T}
+```{r Comparing the performance of different clustering models using different testing methods, eval=F, include=T}
 
 formula <- quantified ~ parameterWaterBodyCategory + resultNumberOfSamples + resultStandardDeviationValue
 
 # Validacioni skup
-dataset <- sdf_random_split(vode.filtered, seed=1, training=0.8, test=0.2)
+dataset.for.validation <- sdf_random_split(water.dataset.filtered, seed=1, training=0.8, test=0.2)
 
-bayes.model <- dataset$training %>% 
+bayes.model <- dataset.for.validation$training %>% 
   ml_naive_bayes(formula)
 
-linear.svc.model <- dataset$training %>%
+linear.svc.model <- dataset.for.validation$training %>%
   ml_linear_svc(formula)
 
-decision.tree.classifier <- dataset$training %>%
+decision.tree.classifier <- dataset.for.validation$training %>%
   ml_decision_tree_classifier(formula)
 
-bm.vs.accuracy <- ml_evaluate(bayesov.model, dataset$test)$Accuracy
-svcm.vs.accuracy <- ml_evaluate(linear.svc.model, dataset$test)$Accuracy
-d3m.vs.accuracy <- ml_evaluate(decision.tree.classifier, dataset$test)$Accuracy
+bm.vs.accuracy <- ml_evaluate(bayes.model, dataset.for.validation$test)$Accuracy
+svcm.vs.accuracy <- ml_evaluate(linear.svc.model, dataset.for.validation$test)$Accuracy
+d3m.vs.accuracy <- ml_evaluate(decision.tree.classifier, dataset.for.validation$test)$Accuracy
 
 # 4-trostruko ukrstanje
 k.cross.fold.4 <- function(filtered.dataset, model, formula){
@@ -205,17 +223,17 @@ k.cross.fold.4 <- function(filtered.dataset, model, formula){
   ) / 4
 }
 
-bayes.model.4.fold.accuracy <- k.cross.fold.4(vode.filtered, ml_naive_bayes, formula)
-svc.4.fold.accuracy <- k.cross.fold.4(vode.filtered, ml_linear_svc, formula)
-d3.4.fold.accuracy <- k.cross.fold.4(vode.filtered, ml_decision_tree_classifier, formula)
+bayes.model.4.fold.accuracy <- k.cross.fold.4(water.dataset.filtered, ml_naive_bayes, formula)
+svc.4.fold.accuracy <- k.cross.fold.4(water.dataset.filtered, ml_linear_svc, formula)
+d3.4.fold.accuracy <- k.cross.fold.4(water.dataset.filtered, ml_decision_tree_classifier, formula)
 ```
 
 #### Tabelarni prikaz tačnosti različitih klasifikacionih modela u odnosu na metod testiranja modela
-```{r Tabelarni prikaz rezultata, echo=F}
+```{r Table view of the performance of different clustering models tested by different validation methods, echo=F}
 knitr::kable(array(c("Bayes-ov model", "Mašina potpornih vektora", "Stablo odlučivanja",
                      bm.vs.accuracy, svcm.vs.accuracy, d3m.vs.accuracy,
                      bayes.model.4.fold.accuracy, svc.4.fold.accuracy, d3.4.fold.accuracy),
-                   dim = c(3,3)),
+                   dim = c(3, 3)),
              col.names = c("Model", "Preciznost korišćenjem validacionog skupa", "Preciznost korišćenjem 4-strukog ukrštanja"),
              label = "Poređenje tačnosti različitih klasifikacionih modela u odnosu na načine validacije",
              align = "ccc",
@@ -226,12 +244,12 @@ knitr::kable(array(c("Bayes-ov model", "Mašina potpornih vektora", "Stablo odlu
 
 ## Klasterizacija podataka
 
-### Prečišćenih podataka za klasterizaciju
-```{r Prečišćavanje podataka za klasterizaciju, eval=F, include=T}
-dataset <- vode.filtered %>%
+### Prečišćenih podataka za proces klasterizacije
+```{r Transformation of the dataset for the clustering process, eval=F, include=T}
+dataset.for.clusterisation <- water.dataset.filtered %>%
   mutate(parameterWaterBodyCategory = switch(parameterWaterBodyCategory,
                                              CW="Coastal water body",
-                                             GW="Groundwater body",
+                                             GW="Ground water body",
                                              LW="Lake water body",
                                              MW="Marine waters",
                                              RW="River water body",
@@ -239,54 +257,56 @@ dataset <- vode.filtered %>%
                                              TeW="Territorial waters")) %>%
   select(parameterWaterBodyCategory, resultNumberOfSamples, quantified)
 
-dataset.summary <- dataset %>% 
+dataset.for.clusterisation.summary <- dataset.for.clusterisation %>% 
   group_by(parameterWaterBodyCategory) %>% 
   summarize(count = n(), meanNumberOfSamples = mean(resultNumberOfSamples), stdev = sd(resultNumberOfSamples), quantified = avg(quantified)) %>% collect
 ```
 
 
 ### Prikaz prečišćenih podataka
-```{r}
-ggplot(dataset.summary, aes(quantified, meanNumberOfSamples, color = parameterWaterBodyCategory)) +
+```{r Displaying of transformed dataset for clusterisation, echo=F}
+ggplot(dataset.for.clusterisation.summary,
+       aes(quantified, meanNumberOfSamples, color = parameterWaterBodyCategory)) +
   geom_errorbar(aes(ymin = meanNumberOfSamples - stdev, ymax = meanNumberOfSamples + stdev), width=0.01) +
   theme(legend.position="right") +
-  labs(y="mean(result number of samples)", x="quantified")
+  labs(y="mean(result number of samples)", x="quantified", color="Water body category")
+
 ```
 
 ### Metod k-means
-```{r Primena klasterizacionog metoda K-means, eval=F, include=T}
+```{r Settup of K-means clusterisation method, eval=F, include=T}
 formula.clusterisation <- parameterWaterBodyCategory ~ resultNumberOfSamples + quantified
 
-model.5   <- ml_kmeans(dataset, formula.clusterisation, seed = 1, k = 5)
-model.10  <- ml_kmeans(dataset, formula.clusterisation, seed = 1, k = 10)
-model.15  <- ml_kmeans(dataset, formula.clusterisation, seed = 1, k = 15)
-model.20  <- ml_kmeans(dataset, formula.clusterisation, seed = 1, k = 20)
+model.5   <- ml_kmeans(dataset.for.clusterisation, formula.clusterisation, seed = 1, k = 5)
+model.10  <- ml_kmeans(dataset.for.clusterisation, formula.clusterisation, seed = 1, k = 10)
+model.15  <- ml_kmeans(dataset.for.clusterisation, formula.clusterisation, seed = 1, k = 15)
+model.20  <- ml_kmeans(dataset.for.clusterisation, formula.clusterisation, seed = 1, k = 20)
 ```
 
-## Prikaz centara klastera u odnosu na broj klastera K
-```{r}
+## Prikaz centroida klastera u odnosu na broj klastera K
+```{r Graphing the centroids of different clusterisation models, echo=F}
 cp1 <- model.5$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples)) +
   geom_point() +
-  labs(x="quantified", y="resultNumberOfSamples") +
+  labs(x="quantified", y="resultNumberOfSamples", title = "5-means") +
   theme_light()
 
 cp2 <- model.10$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples)) +
   geom_point() +
-  labs(x="quantified", y="resultNumberOfSamples") +
+  labs(x="quantified", y="resultNumberOfSamples", title = "10-means") +
   theme_light()
 
 cp3 <- model.15$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples)) +
   geom_point() +
-  labs(x="quantified", y="resultNumberOfSamples") +
+  labs(x="quantified", y="resultNumberOfSamples", title = "15-means") +
   theme_light()
 
 cp4 <-  model.20$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples)) +
   geom_point() +
-  labs(x="quantified", y="resultNumberOfSamples") +
+  labs(x="quantified", y="resultNumberOfSamples", title = "20-means") +
   theme_light()
 
 plot_grid(cp1, cp2, cp3, cp4, nrow=2, ncol=2)
@@ -295,10 +315,6 @@ plot_grid(cp1, cp2, cp3, cp4, nrow=2, ncol=2)
 
 
 ## Zatvaranje spark konekcije
-```{r closing spark context, eval=F, include=T}
+```{r Closing spark context, eval=F, include=T}
 spark_disconnect(sc)
 ```
-
-# Zaključak
-
-# Literatura
