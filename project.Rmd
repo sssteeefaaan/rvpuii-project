@@ -7,11 +7,11 @@ fig_width: 3
 fig_height: 1
 ---
 
-# Uvod
+# I Uvod
 
 U ovom izveštaju su predstavljeni rezultati kreiranja modela za analizu kvaliteta voda u okviru država Evrope, koja je odrađena kao praktični deo ispita *Računarstvo visokih performansi u informacionom inženjeringu*.
 
-## Skup podataka **voda**
+## 1.1. Skup podataka **voda**
 
 Skup podataka o vodama je preuzet sa sajta [eea.europa.eu](https://www.eea.europa.eu/data-and-maps/data/waterbase-water-quality-icm-2). Uz pomoć naredbe za preuzimanje *.zip* fajla i naredbe za otkapkivanje arhiviranog csv na Ubuntu OS-u.
 
@@ -25,11 +25,11 @@ Ovaj skup podataka sadrži vremenske serije hranljivih materija, organske materi
 
 
 
-# Rad
+# II Rad
 
-### Inicijalizacija
+## 2.1. Inicijalizacija
 
-#### Preuzimanje neophodnih paketa za analizu podataka
+### 2.1.1. Preuzimanje neophodnih paketa za analizu podataka
 ```{r Downloading necessary packages for data analysis, eval=F, include=T}
 install.packages("sparklyr")
 install.packages("tidyverse")
@@ -38,7 +38,7 @@ install.packages("kableExtra")
 ```
 
 
-#### Uključivanje neophodnih biblioteka
+### 2.1.2. Uključivanje neophodnih biblioteka
 ```{r Loading necessary libraries, eval=F, include=T}
 library(tidyr)
 library(dplyr)
@@ -51,7 +51,7 @@ library(cowplot)
 ```
 
 
-#### Instaliranje i pripremanje spark okruženja
+### 2.1.3. Instaliranje i pripremanje spark okruženja
 ```{r Installing and setting up spark environment, eval=F, include=T}
 spark_install(version="3.3.2")
 Sys.setenv(JAVA_HOME="/usr/lib/jvm/java-1.11.0-openjdk-amd64")
@@ -60,7 +60,7 @@ sc <- spark_connect(master = "local", version="3.3.2")
 ```
 
 
-#### Učitavanje skupa podataka
+### 2.1.4. Učitavanje skupa podataka
 ```{r Loading dataset and its definition, eval=F, include=T}
 water.dataset <- spark_read_csv(sc,
                                 name="waterdataset",
@@ -69,7 +69,7 @@ water.dataset <- spark_read_csv(sc,
 ```
 
 
-#### Prečišćavanje podataka
+### 2.1.5. Prečišćavanje podataka
 ```{r mutating dataset, eval=F, include=T}
 water.dataset.filtered <- water.dataset %>%
   filter(!(is.na(resultQualityMeanBelowLOQ) ||
@@ -97,7 +97,7 @@ water.dataset.filtered <- water.dataset %>%
 **Dimenzije prečišćenog skupa podataka: `r format(sdf_nrow(water.dataset.filtered), scientific=F)` x `r format(sdf_ncol(water.dataset.filtered), scientific=F)`**
 
 
-#### Prikaz prvih 10 redova prečišćenih podataka
+### 2.1.6. Prikaz prvih 10 redova prečišćenih podataka
 ```{r Displaying first 10 rows of transformed dataset, echo=F}
 knitr::kable(head(water.dataset.filtered, n=10L),
              col.names = c("quantified",
@@ -114,8 +114,9 @@ knitr::kable(head(water.dataset.filtered, n=10L),
 
 
 
+## 2.2. Klasifikacija podataka
 
-### Treniranje modela logističke regresije sa različitim vrednostima broja maksimalnih iteracija
+### 2.2.1. Treniranje modela logističke regresije sa različitim vrednostima broja maksimalnih iteracija
 ```{r Splitting dataset into training and testing datasets, eval=F, include=T}
 dataset.for.clustering <- sdf_random_split(water.dataset.filtered, seed=1, training=0.8, test=0.2)
 formula <- quantified ~ parameterWaterBodyCategory + resultNumberOfSamples + resultStandardDeviationValue
@@ -143,7 +144,7 @@ for(i in samples){
 ```
 
 
-#### Prikaz zavisnosti broja iteracija od tačnosti modela
+### 2.2.2. Prikaz zavisnosti broja iteracija od tačnosti modela
 ```{r Graphing the dependancy of clustering model accuracy based on the number of maximal iterations, include=T, echo=F, fig.align='center', fig.height=10, fig.width=20}
 df <- data.frame(i=max.iterations,
                  wp=log.reg.weighted.precision,
@@ -153,7 +154,7 @@ df <- data.frame(i=max.iterations,
                  a=log.reg.accuracy)
 p1 <- df %>%
 ggplot(aes(i, wp, color=wp)) +
-  geom_line(size=2, show.legend = F) +
+  geom_line(size=2) +
   scale_x_continuous(breaks=max.iterations) +
   scale_y_continuous(breaks=log.reg.weighted.precision) +
   scale_color_gradient(low = "#FF2266", high="#6622FF") +
@@ -162,7 +163,7 @@ ggplot(aes(i, wp, color=wp)) +
 
 p2 <- df %>%
 ggplot(aes(i, wr, color=wr)) +
-  geom_line(size=2, show.legend = F) +
+  geom_line(size=2) +
   scale_x_continuous(breaks=max.iterations) +
   scale_y_continuous(breaks=log.reg.weighted.recall) +
   scale_color_gradient(low = "#6622FF", high="#FF2266") +
@@ -171,7 +172,7 @@ ggplot(aes(i, wr, color=wr)) +
 
 p3 <- df %>%
   ggplot(aes(i, wf, color=wf)) +
-  geom_line(size=2, show.legend = F) +
+  geom_line(size=2) +
   scale_x_continuous(breaks=max.iterations) +
   scale_y_continuous(breaks=log.reg.weighted.f.measure) +
   scale_color_gradient(low = "#FF2266", high="#6622FF") +
@@ -180,7 +181,7 @@ p3 <- df %>%
 
 p4 <- df %>%
   ggplot(aes(i, aur, color=aur)) +
-  geom_line(size=2, show.legend = F) +
+  geom_line(size=2) +
   scale_x_continuous(breaks=max.iterations) +
   scale_y_continuous(breaks=log.reg.area.under.roc) +
   scale_color_gradient(low = "#6622FF", high="#FF2266") +
@@ -201,7 +202,7 @@ Na grafikonu **d)** je predstavljena zavisnost **površine ispod ROC (Receiver O
 ```{r Graphing the dependancy between classification model accuracy and the maximal number of iterations, include=F, eval=T, fig.align='center', fig.width=20, fig.height=10}
 df %>%
   ggplot(aes(i, a, color=a)) +
-  geom_line(size=2, show.legend = F) +
+  geom_line(size=2) +
   scale_x_continuous(breaks=max.iterations) +
   scale_y_continuous(breaks=log.reg.accuracy) +
   theme(text = element_text(size = 16)) +
@@ -209,7 +210,7 @@ df %>%
 ```
 Na ovom grafikonu je predstavljena mera **tačnosti** u odnosu na **maksimalni broj iteracija** algoritma. Ova mera predstavlja odnos korektno i nekorektno klasifikovanih pojava u okviru validacionig skupa. Na ovom grafikonu možemo uočiti da tačnost raste sa porastom broja maksimalnih iteracija algoritma, takođe oko $15.$ podeoka maksimalnog broja iteracija, ovo nam govori da je $20$ maksimalnih iteracija dovoljno da dostignemo preciznost od $\approx 0.74307$, što je izuzetno dobra mera.
 
-### Tačnost različitih klasifikacionih modela u odnosu na metod testiranja modela
+### 2.2.3. Tačnost različitih klasifikacionih modela u odnosu na metod testiranja modela
 ```{r Comparing the performance of different clustering models using different testing methods, eval=F, include=T}
 
 formula <- quantified ~ parameterWaterBodyCategory + resultNumberOfSamples + resultStandardDeviationValue
@@ -263,7 +264,7 @@ svc.4.fold.accuracy <- k.cross.fold.4(water.dataset.filtered, ml_linear_svc, for
 d3.4.fold.accuracy <- k.cross.fold.4(water.dataset.filtered, ml_decision_tree_classifier, formula)
 ```
 
-#### Tabelarni prikaz tačnosti različitih klasifikacionih modela u odnosu na metod testiranja modela
+### 2.2.4. Tabelarni prikaz tačnosti različitih klasifikacionih modela u odnosu na metod testiranja modela
 ```{r Table view of the performance of different clustering models tested by different validation methods, echo=F}
 knitr::kable(array(c("Bayes-ov model", "Mašina potpornih vektora", "Stablo odlučivanja",
                      bm.vs.accuracy, svcm.vs.accuracy, d3m.vs.accuracy,
@@ -278,9 +279,9 @@ knitr::kable(array(c("Bayes-ov model", "Mašina potpornih vektora", "Stablo odlu
 ```
 U ovoj tabeli je prikazano poređenje performansi različitih klasifikacionih modela, koji su trenirani sa istim prediktorskim i ciljnim obeležjem, nad istim podacima i sa istim parametrima. Može se primetiti da je model klasifikacije koji se zasniva na stablu odlučivanja daleko tačniji u odnosu na naivni Bayes-ov model, ili model mašine potpornih vektora.
 
-## Klasterizacija podataka
+## 2.3. Klasterizacija podataka
 
-### Prečišćenih podataka za proces klasterizacije
+### 2.3.1. Prečišćenih podataka za proces klasterizacije
 ```{r Transformation of the dataset for the clustering process, eval=F, include=T}
 dataset.for.clusterisation <- water.dataset.filtered %>%
   select(parameterWaterBodyCategory, resultNumberOfSamples, quantified)
@@ -291,7 +292,7 @@ dataset.for.clusterisation.summary <- dataset.for.clusterisation %>%
 ```
 
 
-### Prikaz prečišćenih podataka
+### 2.3.2. Prikaz prečišćenih podataka
 ```{r Displaying of transformed dataset for clusterisation, echo=F, fig.align='center', fig.height=10, fig.width=20}
 ggplot(dataset.for.clusterisation.summary,
        aes(quantified, meanNumberOfSamples, color = parameterWaterBodyCategory)) +
@@ -303,7 +304,7 @@ ggplot(dataset.for.clusterisation.summary,
 Na ovom grafikonu je ilustrovan *prečišćeni skup podataka* koji će se nastavku iskoristiti za proces *klasterizacije*. Ovaj skup podataka je grupisan na osnovu **kategorije vodenog tela** čiji se uzorak analizira, a grafikon predstavlja odnos **prosečnog broja uzoraka kategorije vodenog tela** i **indikatora kvalifikacije određene kategorije vodenog tela**. Na grafikonu možemo videti da je standardna devijacija prosečnog broja uzoraka za reke, jezera i protočne vode mnogo veća u odnosu na podzemne vode (koje nemaju velike oscilacije u broju uzoraka, ali u porseku imaju mnogo manji broj uzoraka), kao i priobalne vode, koje imaju izuzettno veliki broj kvalifikovanih voda, kao i prosečan broj odmerenih uzoraka.
 
 
-### Metod k-means
+### 2.3.3. Metod k-means
 ```{r Settup of K-means clusterisation method, eval=F, include=T}
 formula.clusterisation <- parameterWaterBodyCategory ~ resultNumberOfSamples + quantified
 
@@ -313,32 +314,32 @@ model.15  <- ml_kmeans(dataset.for.clusterisation, formula.clusterisation, seed 
 model.20  <- ml_kmeans(dataset.for.clusterisation, formula.clusterisation, seed = 1, k = 20)
 ```
 
-## Prikaz centroida klastera u odnosu na broj klastera K
+### 2.3.4. Prikaz centroida klastera u odnosu na broj klastera K
 ```{r Graphing the centroids of different clusterisation models, echo=F, fig.align='center', fig.height=10, fig.width=20}
 cp1 <- model.5$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples, color=resultNumberOfSamples)) +
-  geom_point(size=5, show.legend = F) +
+  geom_point(size=5) +
   scale_color_gradientn(colors = rainbow(10)) +
   theme(text = element_text(size=16)) +
   labs(x="quantified", y="number of samples", title = "a) K=5-means")
 
 cp2 <- model.10$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples, color=resultNumberOfSamples)) +
-  geom_point(size=5, show.legend = F) +
+  geom_point(size=5) +
   scale_color_gradientn(colors = rainbow(10)) +
   theme(text = element_text(size=16)) +
   labs(x="quantified", y="number of samples", title = "a) K=10-means")
 
 cp3 <- model.15$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples, color=resultNumberOfSamples)) +
-  geom_point(size=5, show.legend = F) +
+  geom_point(size=5) +
   scale_color_gradientn(colors = rainbow(10)) +
   theme(text = element_text(size=16)) +
   labs(x="quantified", y="number of samples", title = "a) K=15-means")
 
 cp4 <-  model.20$centers %>%
   ggplot(aes(quantified, resultNumberOfSamples, color=resultNumberOfSamples)) +
-  geom_point(size=5, show.legend = F) +
+  geom_point(size=5) +
   scale_color_gradientn(colors = rainbow(10)) +
   theme(text = element_text(size=16)) +
   labs(x="quantified", y="number of samples", title = "d) K=20-means")
@@ -354,12 +355,12 @@ Na grafikonu **c)**, na kome su identifikovane pozicije $15$ centroida različit
 
 Na poslednjem, **d)** grafikonu, koji takođe ilustruje položaj centroida, u ovom slučaju $20$ klastera na grafikonu odnosa broja uzoraka i njihovih kvaliteta, sve se jasnije vidi trend u rastu broja uzoraka sa kvalitetom kategorije vodenog tela. Opet i ovde postoje izdvojeni klasteri koji se nalaze na pozicijama graničnih vrednosti jednog od predikatora.
 
-## Zatvaranje spark konekcije
+## 2.4. Zatvaranje spark konekcije
 ```{r Closing spark context, eval=F, include=T}
 spark_disconnect(sc)
 ```
 
-# Zaključak
+# III Zaključak
 Ovaj rad je imao za cilj upoznavanje sa programskim jezikom _R_, njegovim stilom programiranja, bibliotekama koje su na raspolaganju, sa najvećim osvrtom na **sparklyr** koja se koristi u kontekstu analize velikih skupova podataka. Fokus ovog rada nije bio preterano na sam skup podataka i informacije koje se iz njega mogu izvući, već na sam postupak analize podataka, kroz njihovo prečišćavanje, transformisanje, obradu i vizuelizaciju informacija koje su iz njih izvučene.
 
 Iz ovog rada se moglo ustanoviti da je važno upoznati se sa dostupnim algoritmima za klasifikaciju i klasterizaciju podataka, tipovima podataka nad kojima su najefikasniji, a najvažnije od svega, performansama koje oni ostvaruju u zavisnosti od korišćenih parametara i testova koji se nad njima primenjuju u cilju njihove validacije. Na osnovu onoga što je u radu izloženo, maksimalan broj iteracija koji treba ciljati pri klasifikaciji je $20$. Što se testova za procenu tačnosti nad validacionom skupom tiče, pristup validacionog skupa i k-tostruka validacija ukrštanjem daju poprilično slične rezultate, barem za parametar $k=4$, pa bih samim tim pre koristio pristup validacionog skupa, jer je mnogo lakši za primenu.
